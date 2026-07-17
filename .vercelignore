@@ -1,0 +1,17 @@
+.agents/
+.claude/
+.impeccable/
+.superpowers/
+.env
+.env.*
+docs/
+tests/
+scripts/
+webp-out/
+medios/
+paquetes/
+*.zip
+*.glb
+*.log
+docker-compose.yml
+PRODUCT.md

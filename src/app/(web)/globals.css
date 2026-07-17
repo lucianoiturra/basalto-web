@@ -1,0 +1,131 @@
+:root {
+  --acc: #c2552e;
+  --bg: rgb(239, 233, 221);
+  --fg: rgb(38, 36, 30);
+  --dim: rgb(135, 127, 110);
+  --z-sticky: 20;
+  --z-bar: 30;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  scroll-behavior: smooth;
+  scrollbar-color: var(--dim) var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-width: 320px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-archivo), sans-serif;
+  transition:
+    background-color 90ms linear,
+    color 90ms linear;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border-radius: 0;
+}
+
+img {
+  max-width: 100%;
+}
+
+.mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.mom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 78px 20px 16px 34px;
+  color: var(--dim);
+  font: 500 9px/1 var(--font-mono), monospace;
+  letter-spacing: 0.26em;
+}
+
+.mom::before {
+  width: 18px;
+  height: 1px;
+  margin-left: -28px;
+  background: var(--dim);
+  content: '';
+}
+
+.flow {
+  width: min(calc(100% - 54px), 480px);
+  margin: 0 20px 0 34px;
+}
+
+.flow h1 {
+  margin-bottom: 14px;
+  color: var(--fg);
+  font-size: clamp(42px, 11vw, 64px);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.flow h2,
+.flow h3 {
+  margin-bottom: 10px;
+  color: var(--fg);
+  font-size: clamp(24px, 7vw, 34px);
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.flow p {
+  max-width: 65ch;
+  margin-bottom: 14px;
+  color: var(--dim);
+  font-size: 14.5px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 4px;
+}
+
+@media (min-width: 720px) {
+  .flow {
+    margin-left: max(34px, calc((100vw - 480px) / 2));
+  }
+
+  .mom {
+    margin-left: max(34px, calc((100vw - 480px) / 2));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

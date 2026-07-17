@@ -5,9 +5,15 @@ node_modules/
 .superpowers/
 .vercel/
 /media/
+/medios/
+/paquetes/
 /webp-out/
 /*.zip
 /*.glb
 /.payload-scaffold/
 /.payload-v386/
 coverage/
+*.tsbuildinfo
+/dev-server*.log
+/blender-export.log
+/gltf-inspect*.log

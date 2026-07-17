@@ -1,0 +1,103 @@
+:root {
+  --cielo: oklch(96% 0.009 63);
+  --tinta: oklch(27% 0.014 69);
+  --brasa: oklch(58% 0.157 42);
+  --linea: color-mix(in oklch, var(--tinta), transparent 75%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--cielo);
+  color: var(--tinta);
+  font-family: Archivo, "Arial Narrow", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+.home {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4rem;
+  padding: clamp(1.5rem, 4vw, 4rem);
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.wordmark span {
+  display: grid;
+  width: 2.65rem;
+  aspect-ratio: 1;
+  place-items: center;
+  background: var(--tinta);
+  color: var(--cielo);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.wordmark strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.26em;
+}
+
+.message {
+  width: min(100%, 58rem);
+}
+
+h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-size: clamp(2.6rem, 8vw, 6rem);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.message p {
+  max-width: 56ch;
+  margin: 2rem 0 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.adminLink {
+  width: fit-content;
+  color: var(--tinta);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-underline-offset: 0.35em;
+  text-decoration-color: var(--brasa);
+  transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.adminLink:hover {
+  color: var(--brasa);
+}
+
+.adminLink:focus-visible {
+  outline: 3px solid var(--brasa);
+  outline-offset: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

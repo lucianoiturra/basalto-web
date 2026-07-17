@@ -4,3 +4,10 @@ node_modules/
 .env.*
 .superpowers/
 .vercel/
+/media/
+/webp-out/
+/*.zip
+/*.glb
+/.payload-scaffold/
+/.payload-v386/
+coverage/

@@ -1,0 +1,549 @@
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  .b8 { display:flex; gap:48px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+  .b8 * { box-sizing:border-box; }
+
+  .vp-col { width:390px; max-width:100%; }
+  .vp-label { font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:.18em; color:#8F8E8C; margin-bottom:8px; }
+  .vp { position:relative; border:1px solid #D8D3CB; box-shadow:0 30px 90px -18px rgba(0,0,0,.4); overflow:hidden; }
+
+  /* el lienzo continuo: las variables cambian con el scroll */
+  .vp .scroll { height:780px; overflow-y:auto; font-family:'Archivo',sans-serif;
+    --bg:#EFE9DD; --fg:#26241E; --dim:#877F6E; --acc:#C2552E;
+    background:var(--bg); color:var(--fg); }
+
+  /* hilo del recorrido */
+  .thread { position:absolute; top:0; bottom:0; left:13px; width:1px; background:linear-gradient(180deg, transparent, currentColor 6%, currentColor 94%, transparent); opacity:.22; color:var(--fg); pointer-events:none; z-index:20; }
+  .walker { position:absolute; left:8.5px; z-index:21; pointer-events:none; transition:top .15s linear; }
+  .walker i { display:block; width:10px; height:10px; border-radius:50%; background:var(--acc); box-shadow:0 0 12px rgba(194,85,46,.55); }
+  .walker b { position:absolute; left:16px; top:-2px; font:500 8.5px/1 'IBM Plex Mono',monospace; letter-spacing:.14em; color:var(--dim); white-space:nowrap; }
+
+  .top { position:absolute; top:0; left:0; right:0; padding:18px 20px 14px; display:flex; justify-content:space-between; align-items:center; z-index:22;
+         background:linear-gradient(180deg, var(--bg), transparent); }
+  .wordmark { font:600 11px/1 'Archivo',sans-serif; letter-spacing:.34em; color:var(--fg); }
+  .menu { width:22px; cursor:pointer; } .menu i { display:block; height:1.5px; background:var(--fg); margin:5px 0; }
+
+  .mom { display:flex; align-items:center; gap:10px; margin:78px 20px 16px 34px; font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:.26em; color:var(--dim); }
+  .mom::before { content:''; width:18px; height:1px; background:var(--dim); margin-left:-28px; }
+
+  .flow { margin:0 20px 0 34px; }
+  .flow h1 { font-weight:800; font-stretch:125%; text-transform:uppercase; font-size:42px; line-height:.95; letter-spacing:.01em; margin:0 0 14px; color:var(--fg); }
+  .flow h3 { font-weight:750; font-size:24px; line-height:1.08; letter-spacing:-0.01em; margin:0 0 10px; color:var(--fg); }
+  .flow p { font:400 14.5px/1.65 'Archivo',sans-serif; color:var(--dim); margin:0 0 14px; max-width:300px; }
+  .flow .datos { display:flex; gap:16px; font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:.12em; color:var(--dim); margin:16px 0 0; }
+
+  /* imágenes que se funden con el fondo */
+  .bleed { position:relative; margin:26px 0; }
+  .bleed img { width:100%; display:block;
+    -webkit-mask-image:linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+    mask-image:linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%); }
+  .bleed .over { position:absolute; left:34px; bottom:34px; right:20px; }
+  .bleed .over b { display:block; font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:.24em; color:#E8E4DC; text-shadow:0 1px 10px rgba(0,0,0,.7); margin-bottom:8px; }
+  .bleed .over span { font:750 26px/1.05 'Archivo',sans-serif; color:#fff; text-shadow:0 2px 18px rgba(0,0,0,.65); letter-spacing:-0.01em; }
+  .bleed .cap { position:absolute; right:20px; bottom:10px; font:500 8px/1 'IBM Plex Mono',monospace; letter-spacing:.16em; color:#E8E4DCaa; }
+
+  .heroimg { margin-top:0; }
+  .heroimg img { -webkit-mask-image:linear-gradient(180deg, #000 0, #000 82%, transparent 100%); mask-image:linear-gradient(180deg, #000 0, #000 82%, transparent 100%); }
+
+  /* la visita: escenas continuas */
+  .visita { position:relative; height:2400px; }
+  .stage { position:sticky; top:0; height:780px; overflow:hidden; }
+  .stage .shot { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0;
+                 transform:scale(1.06); transition:opacity 1s ease, transform 7s cubic-bezier(.2,.6,.3,1); }
+  .stage .shot.on { opacity:1; transform:scale(1); }
+  .stage .fade-in  { position:absolute; top:0; left:0; right:0; height:120px; background:linear-gradient(180deg, var(--bg), transparent); z-index:2; }
+  .stage .fade-out { position:absolute; bottom:0; left:0; right:0; height:200px; background:linear-gradient(0deg, var(--bg), transparent); z-index:2; }
+  .stage .shade { position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(10,10,9,.55) 100%); }
+
+  .minimap { position:absolute; top:64px; right:16px; z-index:3; filter:drop-shadow(0 2px 10px rgba(0,0,0,.5)); }
+  .minimap svg { display:block; }
+  .minimap figcaption { text-align:right; font:500 7.5px/1 'IBM Plex Mono',monospace; letter-spacing:.14em; color:#E8E4DC; margin-top:6px; opacity:.8; }
+  .mm-dot { fill:var(--acc); }
+  .mm-zone { fill:transparent; transition:fill .5s; }
+  .mm-zone.on { fill:rgba(194,85,46,.4); }
+
+  .vcap { position:absolute; left:34px; right:20px; bottom:120px; pointer-events:none; z-index:3; }
+  .vcap .k, .vcap h3v, .vcap p { opacity:0; transform:translateY(12px); transition:opacity .55s ease, transform .55s ease; }
+  .vcap.on .k { opacity:1; transform:none; transition-delay:.05s; }
+  .vcap.on h3v { opacity:1; transform:none; transition-delay:.15s; }
+  .vcap.on p { opacity:1; transform:none; transition-delay:.26s; }
+  .vcap .k { display:block; font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:.28em; color:#f0b596; margin-bottom:10px; }
+  .vcap h3v { display:block; font-weight:800; font-stretch:125%; text-transform:uppercase; font-size:24px; line-height:1.02; color:#fff; margin:0 0 8px; text-shadow:0 2px 16px rgba(0,0,0,.6); }
+  .vcap p { font:400 13.5px/1.55 'Archivo',sans-serif; margin:0; color:#e6e1d8; max-width:280px; text-shadow:0 1px 10px rgba(0,0,0,.7); }
+
+  /* plano en el flujo */
+  .plansec { margin:10px 20px 0 34px; }
+  .plansec svg { display:block; width:100%; height:auto; }
+  .plansec .wall { stroke:var(--fg); fill:none; stroke-dasharray:1; stroke-dashoffset:1; }
+  .plansec.drawn .wall { stroke-dashoffset:0; transition:stroke-dashoffset 2s ease; }
+  .plansec .wall.w2 { transition-delay:.5s; }
+  .plansec .soft { stroke:var(--dim); fill:none; opacity:.7; }
+  .plansec .rm { fill:transparent; cursor:pointer; transition:fill .4s; }
+  .plansec .rm.sel { fill:rgba(194,85,46,.3); }
+  .plansec .rm:hover { fill:rgba(194,85,46,.14); }
+  .plansec .lbl { font-family:'IBM Plex Mono',monospace; fill:var(--dim); pointer-events:none; }
+  .plansec .stopn rect { fill:var(--acc); }
+  .plansec .stopn text { fill:#fff; }
+  .plan-cap { display:flex; justify-content:space-between; font:500 8.5px/1 'IBM Plex Mono',monospace; letter-spacing:.16em; color:var(--dim); margin-top:10px; }
+
+  .reveal { margin:20px -20px 0 -34px; height:0; overflow:hidden; transition:height .5s cubic-bezier(.2,.7,.3,1); position:relative; }
+  .reveal.open { height:230px; }
+  .reveal img { width:100%; height:230px; object-fit:cover; display:block;
+    -webkit-mask-image:linear-gradient(180deg, transparent 0, #000 10%, #000 90%, transparent 100%);
+    mask-image:linear-gradient(180deg, transparent 0, #000 10%, #000 90%, transparent 100%); }
+  .reveal .rmeta { position:absolute; left:34px; bottom:26px; }
+  .reveal .rmeta b { display:block; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:.2em; color:#fff; text-shadow:0 1px 10px rgba(0,0,0,.8); }
+  .reveal .rmeta span { font:500 20px/1.4 'IBM Plex Mono',monospace; color:#f0b596; text-shadow:0 1px 10px rgba(0,0,0,.8); }
+  .rtxt { margin:14px 20px 0 34px; font:400 13.5px/1.6 'Archivo',sans-serif; color:var(--dim); max-width:300px; }
+
+  /* el sol y la maqueta, sin caja */
+  .viewer { position:relative; height:380px; margin:22px 0 0; }
+  .viewer canvas { display:block;
+    -webkit-mask-image:linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-image:linear-gradient(180deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
+  .viewer .poster { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.22; filter:saturate(.5);
+    -webkit-mask-image:linear-gradient(180deg, transparent 0, #000 10%, #000 90%, transparent 100%);
+    mask-image:linear-gradient(180deg, transparent 0, #000 10%, #000 90%, transparent 100%); }
+  .viewer .vcenter { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+  .load3d { padding:15px 26px; background:var(--acc); border:none; color:#fff; font:650 11px/1 'Archivo',sans-serif; letter-spacing:.18em; text-transform:uppercase; cursor:pointer; box-shadow:0 0 34px rgba(194,85,46,.35); }
+  .vnote { font:500 9px/1.6 'IBM Plex Mono',monospace; letter-spacing:.18em; color:var(--dim); }
+  .vload { display:none; font:500 10px/1 'IBM Plex Mono',monospace; letter-spacing:.2em; color:var(--fg); }
+  .vclock { position:absolute; top:14px; right:16px; font:500 11px/1 'IBM Plex Mono',monospace; letter-spacing:.1em; color:var(--fg); display:none; }
+  .v3hint { position:absolute; bottom:8px; left:0; right:0; text-align:center; font:500 8.5px/1 'IBM Plex Mono',monospace; letter-spacing:.2em; color:var(--dim); display:none; }
+  .sunctl { margin:6px 20px 0 34px; }
+  .sun-slider { width:100%; -webkit-appearance:none; appearance:none; height:2px; background:color-mix(in srgb, var(--dim) 40%, transparent); outline:none; }
+  .sun-slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--acc); border:2px solid var(--bg); cursor:grab; box-shadow:0 0 14px rgba(194,85,46,.6); }
+  .sun-slider::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--acc); border:2px solid var(--bg); cursor:grab; }
+  .sunctl .hint { font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:.24em; color:var(--dim); text-align:center; margin:10px 0 12px; }
+  .seasons { display:flex; gap:20px; justify-content:center; }
+  .seasons a { font:500 11px/1 'Archivo',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); padding-bottom:4px; cursor:pointer; border-bottom:1px solid transparent; }
+  .seasons a.on { color:var(--fg); border-bottom-color:var(--acc); }
+
+  /* ficha abierta */
+  .ficha { margin:8px 20px 0 34px; }
+  .ficha .row { display:flex; justify-content:space-between; align-items:baseline; padding:11px 0; border-bottom:1px solid color-mix(in srgb, var(--dim) 30%, transparent); }
+  .ficha .row b { font:500 9px/1 'IBM Plex Mono',monospace; letter-spacing:.22em; color:var(--dim); font-weight:500; }
+  .ficha .row span { font:600 14px/1.2 'Archivo',sans-serif; color:var(--fg); text-align:right; }
+  .decide { margin:34px 20px 0 34px; }
+  .decide .pr { display:flex; align-items:baseline; gap:10px; margin-bottom:16px; }
+  .decide .pr s { font:400 13px/1 'IBM Plex Mono',monospace; color:var(--dim); }
+  .decide .pr em { font:500 32px/1 'IBM Plex Mono',monospace; font-style:normal; color:var(--fg); }
+  .decide .pr u { font:400 11px/1 'Archivo',sans-serif; text-decoration:none; color:var(--dim); }
+  .btn { display:block; width:100%; padding:17px; background:var(--acc); color:#fff; border:none;
+         font:650 12px/1 'Archivo',sans-serif; letter-spacing:.18em; text-transform:uppercase; cursor:pointer;
+         box-shadow:0 0 44px rgba(194,85,46,.4); }
+  .decide .note { margin:12px 0 0; font:400 11.5px/1.6 'Archivo',sans-serif; color:var(--dim); }
+  .decide .wa { display:inline-block; margin-top:18px; font:600 12px/1 'Archivo',sans-serif; color:var(--fg); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .foot-mini { text-align:center; padding:44px 20px 100px 34px; font:500 8.5px/2 'IBM Plex Mono',monospace; letter-spacing:.26em; color:var(--dim); }
+
+  .bar { position:absolute; bottom:0; left:0; right:0; background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(6px);
+         border-top:1px solid color-mix(in srgb, var(--dim) 30%, transparent); display:flex; align-items:center; padding:12px 16px 12px 34px; gap:14px; z-index:25;
+         transform:translateY(102%); transition:transform .45s cubic-bezier(.2,.7,.3,1); }
+  .bar.show { transform:none; }
+  .bar .p { color:var(--fg); font:500 16px/1 'IBM Plex Mono',monospace; }
+  .bar .p small { display:block; font:400 9px/1 'IBM Plex Mono',monospace; letter-spacing:.16em; color:var(--dim); margin-top:4px; }
+  .bar button { flex:1; padding:14px; background:var(--acc); border:none; color:#fff; font:650 11px/1 'Archivo',sans-serif; letter-spacing:.18em; text-transform:uppercase; cursor:pointer; }
+
+  .dir { width:340px; max-width:100%; font-family:'Archivo',sans-serif; }
+  .dir h3 { font:650 16px/1.2 'Archivo',sans-serif; margin:0 0 4px; }
+  .dir .sub { font:400 12.5px/1.55 'Archivo',sans-serif; color:#8F8E8C; margin:0 0 20px; }
+  .spec { border-top:1px solid #D8D3CB; padding:12px 0; }
+  .spec b { display:block; font:500 9.5px/1 'IBM Plex Mono',monospace; letter-spacing:.18em; color:#C2552E; margin-bottom:6px; font-weight:500; }
+  .spec p { margin:0; font:400 13px/1.55 'Archivo',sans-serif; color:#4c4a47; }
+</style>
+
+<h2>Página de casa — UN DÍA EN LA CASA</h2>
+<p class="subtitle">Ya no hay secciones ni cajas: toda la página es una sola tarde que anochece mientras la recorres. Fíjate en el fondo (cambia contigo), en el punto del borde izquierdo (eres tú, con la hora) y en cómo cada cosa se funde con la siguiente.</p>
+
+<div class="b8">
+  <div class="vp-col">
+    <div class="vp-label">VISTA MÓVIL · 390 PX · CASA 001 PITRUFQUÉN</div>
+    <div class="vp">
+      <div class="scroll" id="sc8">
+        <div class="top"><span class="wordmark">BASALTO</span><div class="menu"><i></i><i></i><i></i></div></div>
+
+        <div style="height:66px;"></div>
+
+        <div class="mom">16:00 · LLEGAS</div>
+        <div class="flow">
+          <h1>Pitrufquén</h1>
+          <p>Es media tarde en La Araucanía y subes la loma. La casa aparece larga y baja, esperándote. Quédate hasta la noche: esta página dura lo que dura una visita de verdad.</p>
+          <div class="datos"><span>CASA 001</span><span>180 M²</span><span>4 DORM</span><span>2 BAÑOS</span></div>
+        </div>
+        <div class="bleed heroimg">
+          <img src="/files/v-llegada.jpg" alt="La llegada, al caer la tarde">
+          <div class="cap">LA LLEGADA · PONIENTE</div>
+        </div>
+
+        <div class="mom">17:00 · LA CAMINAS</div>
+        <div class="flow"><p style="margin-bottom:4px;">Sigue bajando sin soltar: cada paso te lleva a un lugar de la casa. El punto del plano te dice dónde estás parado.</p></div>
+
+        <section class="visita" id="visita8">
+          <div class="stage">
+            <img class="shot on" src="/files/v-terraza.jpg"    alt="Terraza cubierta con vista al valle">
+            <img class="shot"    src="/files/v-comedor.jpg"    alt="Comedor y cocina integrados">
+            <img class="shot"    src="/files/v-dormitorio.jpg" alt="Dormitorio con sol de mañana">
+            <div class="shade"></div>
+            <div class="fade-in"></div>
+            <div class="fade-out"></div>
+            <figure class="minimap" style="margin:0;">
+              <svg width="120" height="48" viewBox="0 0 132 52">
+                <rect x="98" y="8" width="28" height="38" fill="none" stroke="#fff" stroke-width=".8" stroke-dasharray="2.5 2.5"/>
+                <rect x="6" y="8" width="92" height="38" fill="none" stroke="#fff" stroke-width="2.2"/>
+                <line x1="6" y1="26" x2="98" y2="26" stroke="#fff" stroke-width=".7"/>
+                <line x1="40" y1="26" x2="40" y2="46" stroke="#fff" stroke-width=".7"/>
+                <line x1="64" y1="8" x2="64" y2="26" stroke="#fff" stroke-width=".7"/>
+                <rect class="mm-zone z0 on" x="98" y="8" width="28" height="38"/>
+                <rect class="mm-zone z1" x="6" y="26" width="34" height="20"/>
+                <rect class="mm-zone z2" x="64" y="8" width="34" height="18"/>
+                <circle class="mm-dot" id="mmdot8" cx="112" cy="27" r="4"/>
+              </svg>
+              <figcaption>ESTÁS AQUÍ</figcaption>
+            </figure>
+            <div class="vcap on"><span class="k">LA TERRAZA · 52 M²</span><h3v>Se llega por afuera</h3v><p>Quincho, leña y sombra mirando el valle. En el sur, la vida pasa aquí aunque llueva.</p></div>
+            <div class="vcap"><span class="k">COCINA Y COMEDOR</span><h3v>Un solo espacio</h3v><p>Integrados y abiertos al norte. La luz de la tarde entra hasta la mesa.</p></div>
+            <div class="vcap"><span class="k">LOS DORMITORIOS</span><h3v>El ala del silencio</h3v><p>Cuatro dormitorios en su propia ala. Sol de mañana para despertar.</p></div>
+          </div>
+        </section>
+
+        <div class="mom">18:30 · LEES EL PLANO</div>
+        <div class="flow">
+          <h3>Lo que caminaste, dibujado</h3>
+          <p>La luz baja y extendemos el plano sobre la mesa. Es la lámina real, con sus medidas. Toca donde estuviste — o donde falta por conocer.</p>
+        </div>
+        <div class="plansec" id="plansec8">
+          <svg id="plan8" viewBox="0 0 396 170" aria-label="Planta interactiva Casa Pitrufquén">
+            <rect class="soft" x="8" y="131" width="378" height="28" stroke-width=".8" stroke-dasharray="3 3"/>
+            <rect class="soft" x="332" y="8" width="54" height="123" stroke-width=".8" stroke-dasharray="3 3"/>
+            <rect class="wall" x="8" y="8" width="324" height="123" stroke-width="3" pathLength="1"/>
+            <g stroke-width="1.1">
+              <line class="wall w2" x1="8"   y1="65" x2="332" y2="65"  pathLength="1"/>
+              <line class="wall w2" x1="152" y1="82" x2="332" y2="82"  pathLength="1"/>
+              <line class="wall w2" x1="86"  y1="8"  x2="86"  y2="65"  pathLength="1"/>
+              <line class="wall w2" x1="116" y1="8"  x2="116" y2="65"  pathLength="1"/>
+              <line class="wall w2" x1="152" y1="8"  x2="152" y2="82"  pathLength="1"/>
+              <line class="wall w2" x1="221" y1="8"  x2="221" y2="65"  pathLength="1"/>
+              <line class="wall w2" x1="296" y1="8"  x2="296" y2="65"  pathLength="1"/>
+              <line class="wall w2" x1="116" y1="65" x2="116" y2="131" pathLength="1"/>
+              <line class="wall w2" x1="221" y1="82" x2="221" y2="131" pathLength="1"/>
+            </g>
+            <g class="soft" stroke-width=".7">
+              <path d="M 138 8 A 16 16 0 0 1 122 24" fill="none"/>
+              <path d="M 332 66 A 15 15 0 0 1 347 81" fill="none"/>
+              <path d="M 70 131 A 16 16 0 0 1 86 115" fill="none"/>
+            </g>
+            <rect class="rm" data-n="COCINA" data-a="14,27" data-img="v-comedor.jpg" data-t="Abierta al comedor, con isla para cocinar mirando a la familia." x="8" y="8" width="78" height="57"/>
+            <rect class="rm" data-n="LAVANDERÍA" data-a="5,32" data-t="Lavado y secado en su propio cuarto: el ruido queda tras la puerta." x="86" y="8" width="30" height="57"/>
+            <rect class="rm" data-n="BAÑO 1" data-a="6,45" data-t="Con tina, para el ala de los niños." x="116" y="8" width="36" height="57"/>
+            <rect class="rm" data-n="HABITACIÓN 3" data-a="12,42" data-img="v-dormitorio.jpg" data-t="Sol de mañana por el oriente." x="152" y="8" width="69" height="57"/>
+            <rect class="rm" data-n="HABITACIÓN 2" data-a="13,55" data-img="v-dormitorio.jpg" data-t="Sol de mañana y vista al jardín." x="221" y="8" width="75" height="57"/>
+            <rect class="rm" data-n="BAÑO 2" data-a="6,53" data-t="El baño de visitas y del dormitorio principal." x="296" y="8" width="36" height="57"/>
+            <rect class="rm" data-n="COMEDOR" data-a="22,92" data-img="v-comedor.jpg" data-t="La mesa larga junto al ventanal poniente: aquí pasan las sobremesas." x="8" y="65" width="108" height="66"/>
+            <rect class="rm" data-n="LIVING" data-a="22,08" data-t="Estar amplio conectado al comedor y al deck." x="116" y="65" width="105" height="66"/>
+            <rect class="rm" data-n="CIRCULACIÓN" data-a="5,84" data-t="Un solo pasillo corto reparte a los dormitorios." x="152" y="65" width="180" height="17"/>
+            <rect class="rm" data-n="HABITACIÓN 1" data-a="17,59" data-img="v-dormitorio.jpg" data-t="El dormitorio principal, con salida directa a la terraza." x="221" y="82" width="111" height="49"/>
+            <rect class="rm" data-n="TERRAZA" data-a="52,72" data-img="v-terraza.jpg" data-t="En L: quincho techado al oriente y deck abierto al poniente." x="332" y="8" width="54" height="123"/>
+            <rect class="rm" data-n="TERRAZA" data-a="52,72" data-img="v-terraza.jpg" data-t="En L: quincho techado al oriente y deck abierto al poniente." x="8" y="131" width="378" height="28"/>
+            <g class="lbl" font-size="6.2">
+              <text x="47" y="34" text-anchor="middle">COCINA</text><text x="47" y="42" text-anchor="middle" font-size="5.4">14,3</text>
+              <text x="101" y="34" text-anchor="middle">LAV.</text><text x="101" y="42" text-anchor="middle" font-size="5.4">5,3</text>
+              <text x="134" y="34" text-anchor="middle">BAÑO</text><text x="134" y="42" text-anchor="middle" font-size="5.4">6,5</text>
+              <text x="186" y="34" text-anchor="middle">HAB 3</text><text x="186" y="42" text-anchor="middle" font-size="5.4">12,4</text>
+              <text x="258" y="34" text-anchor="middle">HAB 2</text><text x="258" y="42" text-anchor="middle" font-size="5.4">13,6</text>
+              <text x="314" y="34" text-anchor="middle">BAÑO</text><text x="314" y="42" text-anchor="middle" font-size="5.4">6,5</text>
+              <text x="62" y="96" text-anchor="middle">COMEDOR</text><text x="62" y="104" text-anchor="middle" font-size="5.4">22,9</text>
+              <text x="168" y="106" text-anchor="middle">LIVING</text><text x="168" y="114" text-anchor="middle" font-size="5.4">22,1</text>
+              <text x="276" y="104" text-anchor="middle">HAB 1</text><text x="276" y="112" text-anchor="middle" font-size="5.4">17,6</text>
+              <text x="359" y="70" text-anchor="middle">TERRAZA</text><text x="359" y="78" text-anchor="middle" font-size="5.4">52,7</text>
+            </g>
+            <g class="stopn" font-family="IBM Plex Mono" font-size="7">
+              <rect x="352" y="94" width="14" height="12"/><text x="359" y="103" text-anchor="middle">01</text>
+              <rect x="26" y="70" width="14" height="12"/><text x="33" y="79" text-anchor="middle">02</text>
+              <rect x="230" y="86" width="14" height="12"/><text x="237" y="95" text-anchor="middle">03</text>
+            </g>
+            <g transform="translate(384,152)" opacity=".7"><circle r="6" fill="none" stroke="currentColor" stroke-width=".7"/><line x1="0" y1="4" x2="0" y2="-4" stroke="currentColor" stroke-width=".7"/><text x="0" y="-9" text-anchor="middle" font-family="IBM Plex Mono" font-size="6" fill="currentColor">N</text></g>
+          </svg>
+          <div class="plan-cap"><span>PLANTA GENERAL · 179,7 M²</span><span>LÁMINA A1.1 INCLUIDA</span></div>
+        </div>
+        <div class="reveal" id="rev8"><img id="rimg8" src="/files/v-terraza.jpg" alt=""><div class="rmeta"><b id="rname8"></b><span id="rarea8"></span></div></div>
+        <p class="rtxt" id="rtxt8">Toca un recinto del plano y aparece aquí, terminado.</p>
+
+        <div class="mom">19:30 · EL SOL SE PONE</div>
+        <div class="flow">
+          <h3>El mismo sol que te acompañó</h3>
+          <p>Toda la tarde el sol se movió contigo. Ahora tómalo tú: gira la casa, arrastra la hora, cambia la estación — y mira dónde caen las sombras en tu futuro patio.</p>
+        </div>
+        <div class="viewer" id="viewer8">
+          <img class="poster" src="/files/v-llegada.jpg" alt="">
+          <div class="vcenter" id="vcenter8">
+            <button class="load3d" id="load8">Cargar la maqueta 3D</button>
+            <span class="vnote">MODELO REAL · 12 MB · SOLO SI TÚ QUIERES</span>
+            <span class="vload" id="vload8">CARGANDO MAQUETA… 0%</span>
+          </div>
+          <div class="vclock" id="vclock8">15:00</div>
+          <div class="v3hint" id="v3hint8">GIRA CON EL DEDO · PELLIZCA PARA ACERCAR</div>
+        </div>
+        <div class="sunctl">
+          <input class="sun-slider" id="hr8" type="range" min="7" max="20" step="0.25" value="15" aria-label="Hora del día">
+          <p class="hint">ARRASTRA EL SOL · LA SOMBRA ES REAL</p>
+          <div class="seasons"><a class="on" data-amp="1">Verano</a><a data-amp="0.75">Otoño</a><a data-amp="0.5">Invierno</a><a data-amp="0.8">Primavera</a></div>
+        </div>
+
+        <div class="mom">21:00 · YA DE NOCHE, LA VERDAD</div>
+        <div class="flow">
+          <h3>Esta casa ya existe</h3>
+          <p>La Pitrufquén se construyó sobre una loma en La Araucanía, con las mismas láminas que estás a punto de descargar.</p>
+        </div>
+        <div class="bleed">
+          <img src="/files/obra.jpg" alt="Casa Pitrufquén real en construcción">
+          <div class="over"><b>OBRA REAL · 2023</b><span>De estas láminas,<br>esta casa.</span></div>
+          <div class="cap">PITRUFQUÉN · REG. 13.02.2023</div>
+        </div>
+
+        <div class="mom" id="decide8">22:00 · LA DECIDES</div>
+        <div class="ficha">
+          <div class="row"><b>SUPERFICIE</b><span>180 m²</span></div>
+          <div class="row"><b>DORMITORIOS / BAÑOS</b><span>4 / 2</span></div>
+          <div class="row"><b>LÁMINAS</b><span>13 PDF listas para el permiso</span></div>
+          <div class="row"><b>EDITABLES</b><span>DWG para tu constructor</span></div>
+          <div class="row"><b>ESPECIFICACIONES</b><span>EETT partida por partida</span></div>
+          <div class="row"><b>ENTREGA</b><span>Inmediata, a tu correo</span></div>
+        </div>
+        <div class="decide">
+          <div class="pr"><s>$89.900</s><em>$59.900</em><u>CLP</u></div>
+          <button class="btn">Comprar los planos</button>
+          <p class="note">Pago con Mercado Pago · Ajustes menores opcionales · La descarga no caduca</p>
+          <a class="wa">¿Dudas? Escríbenos por WhatsApp</a>
+        </div>
+
+        <div class="foot-mini">BASALTO ARQUITECTURA<br>CASAS PARA EL SUR DE CHILE</div>
+      </div>
+
+      <div class="thread"></div>
+      <div class="walker" id="walker8"><i></i><b id="wtime8">16:00</b></div>
+      <div class="bar" id="bar8"><div class="p">$59.900<small>CASA 001 · PITRUFQUÉN</small></div><button>Comprar los planos</button></div>
+    </div>
+  </div>
+
+  <aside class="dir">
+    <h3>Un día en la casa</h3>
+    <p class="sub">La respuesta a "no fluye": no hay secciones. Hay una sola tarde que anochece contigo dentro.</p>
+    <div class="spec"><b>EL CIELO ES UNO</b><p>El fondo pasa de la luz de las 16:00 al crepúsculo y a la noche según cuánto has bajado — sin cortes, sin cajas. Las imágenes se funden con él por los bordes.</p></div>
+    <div class="spec"><b>TÚ ERES EL PUNTO</b><p>El hilo del borde izquierdo recorre toda la página con la hora del día. El mismo punto terracota que te ubica en el plano durante la visita te acompaña de la llegada a la compra.</p></div>
+    <div class="spec"><b>CADA COSA NACE DE LA ANTERIOR</b><p>La visita desemboca en el plano ("lo que caminaste, dibujado"), el plano en el sol ("el mismo que te acompañó"), el sol en la noche, y la noche en la verdad: la foto de la obra. El precio llega cuando el día termina.</p></div>
+    <div class="spec"><b>SIN CHROME</b><p>Cero tarjetas, cero bordes, cero títulos con marco. Solo momentos con hora (16:00, 17:00, 18:30…) sobre un lienzo continuo. La información fluye porque es un solo relato.</p></div>
+  </aside>
+</div>
+
+<div class="options" style="margin-top:36px;">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Esto es lo que buscaba</h3><p>Cerramos con "Un día en la casa" y documento todo el sitio con este lenguaje.</p></div>
+  </div>
+  <div class="option" data-choice="ajustes" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Va por ahí — afinemos</h3><p>Selecciona y dime en el chat qué momento o transición mejorarías.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sc = document.getElementById('sc8');
+  if(!sc) return;
+
+  /* cielo continuo: keyframes de color por progreso */
+  var K = [
+    [0.00, [239,233,221], [38,36,30],   [135,127,110]],
+    [0.16, [234,222,198], [42,36,24],   [131,122,104]],
+    [0.42, [58,52,44],    [237,231,218],[167,159,144]],
+    [0.62, [29,28,24],    [234,229,219],[156,151,140]],
+    [1.00, [14,15,13],    [232,228,220],[143,139,131]]
+  ];
+  function lerp(a,b,t){ return Math.round(a+(b-a)*t); }
+  function ramp(p){
+    var i=1; while(i<K.length-1 && K[i][0]<p) i++;
+    var t=(p-K[i-1][0])/(K[i][0]-K[i-1][0]); t=Math.max(0,Math.min(1,t));
+    function mix(k){ return 'rgb('+lerp(K[i-1][k][0],K[i][k][0],t)+','+lerp(K[i-1][k][1],K[i][k][1],t)+','+lerp(K[i-1][k][2],K[i][k][2],t)+')'; }
+    return [mix(1), mix(2), mix(3)];
+  }
+
+  var visita = document.getElementById('visita8');
+  var shots = visita.querySelectorAll('.shot');
+  var caps  = visita.querySelectorAll('.vcap');
+  var zones = visita.querySelectorAll('.mm-zone');
+  var dot = document.getElementById('mmdot8');
+  var dotPos = [[112,27],[23,36],[81,17]];
+  var cur = 0;
+  var bar = document.getElementById('bar8'), decide = document.getElementById('decide8');
+  var plansec = document.getElementById('plansec8');
+  var walker = document.getElementById('walker8'), wtime = document.getElementById('wtime8');
+  window.dia8 = { bg:'rgb(239,233,221)' };
+
+  function pad(n){ return (n<10?'0':'')+n; }
+  function onScroll(){
+    var st = sc.scrollTop;
+    var max = sc.scrollHeight - 780;
+    var p = Math.max(0, Math.min(1, st / max));
+
+    var c = ramp(p);
+    sc.style.setProperty('--bg', c[0]);
+    sc.style.setProperty('--fg', c[1]);
+    sc.style.setProperty('--dim', c[2]);
+    window.dia8.bg = c[0];
+
+    walker.style.top = (20 + p * 700) + 'px';
+    var hh = 16 + p * 6.5, h = Math.floor(hh), mm = Math.floor((hh % 1) * 60);
+    wtime.textContent = pad(h) + ':' + pad(mm);
+
+    var span = visita.offsetHeight - 780;
+    var vp = Math.max(0, Math.min(0.999, (st - visita.offsetTop) / span));
+    var i = Math.floor(vp * 3);
+    if(i !== cur){
+      cur = i;
+      shots.forEach(function(el,k){ el.classList.toggle('on', k===i); });
+      caps.forEach(function(el,k){ el.classList.toggle('on', k===i); });
+      zones.forEach(function(el,k){ el.classList.toggle('on', k===i); });
+      dot.setAttribute('cx', dotPos[i][0]); dot.setAttribute('cy', dotPos[i][1]);
+    }
+    if(st > plansec.offsetTop - 700){ plansec.classList.add('drawn'); }
+    bar.classList.toggle('show', st > decide.offsetTop - 600);
+  }
+  sc.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  var rooms = document.querySelectorAll('#plan8 .rm');
+  var rimg = document.getElementById('rimg8'), rname = document.getElementById('rname8'),
+      rarea = document.getElementById('rarea8'), rtxt = document.getElementById('rtxt8'),
+      rev = document.getElementById('rev8');
+  rooms.forEach(function(r){
+    r.addEventListener('click', function(){
+      rooms.forEach(function(x){ x.classList.remove('sel'); });
+      document.querySelectorAll('#plan8 .rm[data-n="' + r.getAttribute('data-n') + '"]').forEach(function(x){ x.classList.add('sel'); });
+      rname.textContent = r.getAttribute('data-n');
+      rarea.textContent = r.getAttribute('data-a') + ' M²';
+      rtxt.textContent = r.getAttribute('data-t');
+      var img = r.getAttribute('data-img');
+      if(img){ rimg.src = '/files/' + img; rev.classList.add('open'); }
+      else { rev.classList.remove('open'); }
+    });
+  });
+
+  window.solB8 = { t:15, amp:1, apply:null };
+  var hr = document.getElementById('hr8'), clock = document.getElementById('vclock8');
+  hr.addEventListener('input', function(){
+    window.solB8.t = parseFloat(hr.value);
+    var h=Math.floor(window.solB8.t), m=Math.round((window.solB8.t%1)*60);
+    clock.textContent = pad(h)+':'+pad(m);
+    if(window.solB8.apply) window.solB8.apply();
+  });
+  document.querySelectorAll('.b8 .seasons a').forEach(function(s){
+    s.addEventListener('click', function(){
+      document.querySelectorAll('.b8 .seasons a').forEach(function(x){ x.classList.remove('on'); });
+      s.classList.add('on');
+      window.solB8.amp = parseFloat(s.getAttribute('data-amp'));
+      if(window.solB8.apply) window.solB8.apply();
+    });
+  });
+})();
+</script>
+
+<script type="module">
+const btn = document.getElementById('load8');
+if (btn) btn.addEventListener('click', async () => {
+  const center = document.getElementById('vcenter8');
+  const loadTxt = document.getElementById('vload8');
+  btn.style.display = 'none';
+  center.querySelector('.vnote').style.display = 'none';
+  loadTxt.style.display = 'block';
+  try {
+    const THREE = await import('three');
+    const { ColladaLoader } = await import('three/addons/loaders/ColladaLoader.js');
+    const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+    const holder = document.getElementById('viewer8');
+    const W = holder.clientWidth, H = holder.clientHeight;
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(window.dia8.bg);
+    const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 2000);
+    const hemi = new THREE.HemisphereLight(0xdfe8f0, 0x54473a, 0.6);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xfff4e0, 2);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+    const loader = new ColladaLoader();
+    const collada = await new Promise((res, rej) => {
+      loader.load('/files/casa.dae', res,
+        (e) => { if (e.total) loadTxt.textContent = 'CARGANDO MAQUETA… ' + Math.round(e.loaded / e.total * 100) + '%'; },
+        rej);
+    });
+    const model = collada.scene;
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true; o.receiveShadow = true;
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.side = THREE.DoubleSide; });
+      }
+    });
+    scene.add(model);
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const c = box.getCenter(new THREE.Vector3());
+    model.position.sub(c);
+    model.position.y += size.y / 2;
+    const D = Math.max(size.x, size.z);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(D * 1.3, 64), new THREE.ShadowMaterial({ opacity: 0.45 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    sun.shadow.camera.left = -D; sun.shadow.camera.right = D;
+    sun.shadow.camera.top = D;   sun.shadow.camera.bottom = -D;
+    sun.shadow.camera.far = D * 6;
+    sun.shadow.camera.updateProjectionMatrix();
+    camera.position.set(D * 0.9, size.y * 1.6, D * 0.85);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, size.y * 0.45, 0);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = 1.48;
+    controls.minDistance = D * 0.35;
+    controls.maxDistance = D * 2.5;
+    const warm = new THREE.Color(0xffb877), day = new THREE.Color(0xfff6e8);
+    function applySun(){
+      const s = window.solB8, f = (s.t - 7) / 13, a = Math.PI * (1 - f);
+      const R = D * 2;
+      const elev = Math.max(0.03, Math.sin(a) * s.amp);
+      sun.position.set(Math.cos(a) * R, elev * R * 0.75, -R * 0.35);
+      sun.color.lerpColors(warm, day, Math.min(1, elev * 1.7));
+      sun.intensity = 0.5 + 2.1 * Math.min(1, elev * 1.5);
+      hemi.intensity = 0.3 + 0.5 * elev;
+    }
+    window.solB8.apply = applySun;
+    applySun();
+    loadTxt.style.display = 'none';
+    center.style.display = 'none';
+    holder.querySelector('.poster').style.display = 'none';
+    document.getElementById('vclock8').style.display = 'block';
+    document.getElementById('v3hint8').style.display = 'block';
+    holder.insertBefore(renderer.domElement, holder.firstChild);
+    (function loop(){
+      requestAnimationFrame(loop);
+      scene.background.set(window.dia8.bg);
+      controls.update();
+      renderer.render(scene, camera);
+    })();
+  } catch (err) {
+    loadTxt.textContent = 'NO SE PUDO CARGAR AQUÍ — EN LA WEB REAL USAREMOS GLB OPTIMIZADO';
+    console.error(err);
+  }
+});
+</script>

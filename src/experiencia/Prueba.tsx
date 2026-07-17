@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 import type { Casa, Medio } from '@/payload-types'
 
 import s from './experiencia.module.css'
@@ -24,7 +26,14 @@ export function Prueba({ casa }: { casa: Casa }) {
         </p>
       </div>
       <figure className={s.bleed}>
-        <img src={url} alt={imagen?.alt ?? `Obra construida de ${casa.nombre}`} />
+        <Image
+          src={url}
+          alt={imagen?.alt ?? `Obra construida de ${casa.nombre}`}
+          width={imagen?.sizes?.pantalla?.width ?? imagen?.width ?? 1600}
+          height={imagen?.sizes?.pantalla?.height ?? imagen?.height ?? 1067}
+          sizes="100vw"
+          quality={60}
+        />
         <div className={s.over}>
           <b>OBRA REAL · {foto.fecha?.slice(-4) ?? 'CONSTRUIDA'}</b>
           <span>

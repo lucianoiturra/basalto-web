@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Casa, Medio } from '@/payload-types'
@@ -150,7 +151,13 @@ export function Planta({ casa }: { casa: Casa }) {
         aria-hidden={!urlRender}
       >
         {urlRender ? (
-          <img src={urlRender} alt={render?.alt ?? elegido?.nombre ?? ''} />
+          <Image
+            src={urlRender}
+            alt={render?.alt ?? elegido?.nombre ?? ''}
+            fill
+            sizes="100vw"
+            quality={60}
+          />
         ) : null}
         {elegido && urlRender ? (
           <div className={s.rmeta}>

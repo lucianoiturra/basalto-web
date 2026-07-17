@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 import type { Casa, Medio } from '@/payload-types'
 
 import s from './experiencia.module.css'
@@ -7,7 +9,8 @@ const comoMedio = (valor: number | Medio | null | undefined): Medio | undefined 
 
 export function Portada({ casa }: { casa: Casa }) {
   const imagen = comoMedio(casa.momentos?.llegada?.imagen)
-  const url = imagen?.sizes?.pantalla?.url ?? imagen?.url
+  const url =
+    imagen?.sizes?.tarjeta?.url ?? imagen?.sizes?.pantalla?.url ?? imagen?.url
 
   return (
     <>
@@ -26,11 +29,25 @@ export function Portada({ casa }: { casa: Casa }) {
       </div>
       {url ? (
         <figure className={`${s.bleed} ${s.heroimg}`}>
-          <img
+          <Image
             src={url}
             alt={imagen?.alt ?? casa.nombre}
+            width={
+              imagen?.sizes?.tarjeta?.width ??
+              imagen?.sizes?.pantalla?.width ??
+              imagen?.width ??
+              800
+            }
+            height={
+              imagen?.sizes?.tarjeta?.height ??
+              imagen?.sizes?.pantalla?.height ??
+              imagen?.height ??
+              800
+            }
+            sizes="100vw"
+            preload
             fetchPriority="high"
-            decoding="async"
+            quality={25}
           />
           <figcaption className={s.cap}>
             LA LLEGADA · {casa.ubicacion?.toUpperCase() ?? 'SUR DE CHILE'}

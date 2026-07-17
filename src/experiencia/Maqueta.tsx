@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
 import type { Casa, Medio } from '@/payload-types'
@@ -68,6 +69,7 @@ export function Maqueta({ casa }: { casa: Casa }) {
   }
 
   useEffect(() => {
+    montado.current = true
     return () => {
       montado.current = false
       visor.current?.destruir()
@@ -117,12 +119,14 @@ export function Maqueta({ casa }: { casa: Casa }) {
         aria-busy={estado.tipo === 'cargando'}
       >
         {urlPoster ? (
-          <img
+          <Image
             className={s.poster}
             src={urlPoster}
             alt=""
             aria-hidden="true"
-            loading="lazy"
+            fill
+            sizes="100vw"
+            quality={60}
           />
         ) : null}
         {!listo ? (

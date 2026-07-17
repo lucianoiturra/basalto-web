@@ -13,9 +13,24 @@ import type { Casa } from '@/payload-types'
 
 import s from '@/experiencia/experiencia.module.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export type CasaCompleta = Casa
+
+export async function generateStaticParams() {
+  const payload = await getPayload({ config })
+  const resultado = await payload.find({
+    collection: 'casas',
+    depth: 0,
+    limit: 100,
+    pagination: false,
+    where: { publicada: { equals: true } },
+  })
+
+  return resultado.docs.flatMap((casa) =>
+    casa.slug ? [{ slug: casa.slug }] : [],
+  )
+}
 
 export default async function PaginaCasa({
   params,

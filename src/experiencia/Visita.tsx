@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Casa, Medio } from '@/payload-types'
@@ -82,13 +83,15 @@ export function Visita({ casa }: { casa: Casa }) {
           if (!url) return null
 
           return (
-            <img
+            <Image
               key={escena.id ?? indice}
               src={url}
               alt={imagen?.alt ?? escena.titulo}
               className={`${s.shot} ${indice === activa ? s.on : ''}`}
-              loading={indice === 0 ? 'eager' : 'lazy'}
-              decoding="async"
+              fill
+              sizes="100vw"
+              fetchPriority="low"
+              quality={60}
             />
           )
         })}
